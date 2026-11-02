@@ -47,6 +47,15 @@ jobs:
           unzip -q "$ZIP_FILE" -d project
           test -f project/android/settings.gradle.kts
 
+      - name: Align Java and Kotlin JVM targets
+        shell: bash
+        run: |
+          set -euo pipefail
+          BUILD_FILE="project/android/app/build.gradle.kts"
+          test -f "$BUILD_FILE"
+          sed -i 's/JavaVersion\.VERSION_1_8/JavaVersion.VERSION_17/g' "$BUILD_FILE"
+          grep -n -A5 -B2 'compileOptions' "$BUILD_FILE"
+
       - name: Build debug APK
         run: |
           cd project/android
@@ -58,4 +67,3 @@ jobs:
           name: Ava-debug-APK
           path: project/android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
-          
