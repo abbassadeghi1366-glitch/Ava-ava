@@ -46,15 +46,33 @@ jobs:
           mkdir -p project
           unzip -q "$ZIP_FILE" -d project
           test -f project/android/settings.gradle.kts
+          test -f project/android/app/build.gradle.kts
 
-      - name: Align Java and Kotlin JVM targets
+      - name: Set Java and Kotlin JVM targets to 17
         shell: bash
         run: |
           set -euo pipefail
-          BUILD_FILE="project/android/app/build.gradle.kts"
-          test -f "$BUILD_FILE"
-          sed -i 's/JavaVersion\.VERSION_1_8/JavaVersion.VERSION_17/g' "$BUILD_FILE"
-          grep -n -A5 -B2 'compileOptions' "$BUILD_FILE"
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("project/android/app/build.gradle.kts")
+          s = p.read_text()
+          marker = "android {"
+          if marker not in s:
+              raise SystemExit("Could not find android { block in app/build.gradle.kts")
+          if "compileOptions {" not in s:
+              s = s.replace(
+                  marker,
+                  marker + '''
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
+              }
+          ''',
+                  1
+              )
+          p.write_text(s)
+          print(p.read_text())
+          PY
 
       - name: Build debug APK
         run: |
