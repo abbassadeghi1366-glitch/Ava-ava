@@ -1,0 +1,14 @@
+AVA AI enhanced starter project
+
+README_FA.md
+backend/package.json
+backend/.env.example
+backend/.gitignore
+backend/server.js
+android/settings.gradle.kts
+android/build.gradle.kts
+android/gradle.properties
+android/app/build.gradle.kts
+android/app/src/main/AndroidManifest.xml
+android/app/src/main/java/com/avaai/MainActivity.kt
+android/gradle/wrapper/gradle-wrapper.properties
