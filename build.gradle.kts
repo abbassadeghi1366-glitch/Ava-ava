@@ -5,10 +5,6 @@ plugins {
 }
 
 android {
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
     namespace = "com.avaai"
     compileSdk = 35
     defaultConfig {
@@ -32,7 +28,5 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    // Native 3D GLB rendering with Filament + Jetpack Compose
-    implementation("io.github.sceneview:sceneview:4.26.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
