@@ -11,6 +11,14 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import io.github.sceneview.math.Position
+import io.github.sceneview.math.Rotation
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -36,6 +44,12 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.util.Locale
+import io.github.sceneview.SceneView
+import io.github.sceneview.rememberCameraManipulator
+import io.github.sceneview.rememberEngine
+import io.github.sceneview.rememberModelInstance
+import io.github.sceneview.rememberModelLoader
+import io.github.sceneview.node.ModelNode
 
 private val client = OkHttpClient()
 private val jsonType = "application/json; charset=utf-8".toMediaType()
@@ -72,6 +86,7 @@ fun AvaScreen(onSpeak: (String) -> Unit, onListenResult: (String) -> Unit) {
     var draft by remember { mutableStateOf("") }
     var platform by remember { mutableStateOf("telegram") }
     var chatId by remember { mutableStateOf("") }
+    var instagramRecipientId by remember { mutableStateOf("") }
     val lines = remember { mutableStateListOf(ChatLine(false, "سلام! من آوا هستم. می‌توانم به پرسش‌ها پاسخ بدهم و برای پیام‌ها پیش‌نویس بسازم.")) }
 
     val speechLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -120,6 +135,23 @@ fun AvaScreen(onSpeak: (String) -> Unit, onListenResult: (String) -> Unit) {
                     }
                     Surface(shape = CircleShape, color = Color(0xFF233A35)) {
                         Text("● آنلاین", modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = Color(0xFF7BE0B1), fontSize = 12.sp)
+                    }
+                }
+
+                // Real GLB avatar viewport. The supplied model is a static mesh (no embedded animations).
+                Surface(
+                    shape = RoundedCornerShape(22.dp),
+                    color = Color(0xFF211A30),
+                    modifier = Modifier.fillMaxWidth().height(300.dp)
+                ) {
+                    Box(Modifier.fillMaxSize()) {
+                        Ava3DAvatar(Modifier.fillMaxSize())
+                        Surface(
+                            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 10.dp),
+                            color = Color(0xAA211A30), shape = RoundedCornerShape(50)
+                        ) {
+                            Text("آوا • مدل سه‌بعدی", modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp), color = Color.White, fontSize = 12.sp)
+                        }
                     }
                 }
 
@@ -187,12 +219,13 @@ fun AvaScreen(onSpeak: (String) -> Unit, onListenResult: (String) -> Unit) {
                         if (platform == "telegram") {
                             OutlinedTextField(value = chatId, onValueChange = { chatId = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Telegram chat_id") }, singleLine = true)
                         } else {
-                            Text("ارسال اینستاگرام تا زمان تنظیم رسمی Meta در سرور غیرفعال است.", color = Color(0xFFFFD180), fontSize = 12.sp)
+                            OutlinedTextField(value = instagramRecipientId, onValueChange = { instagramRecipientId = it }, modifier = Modifier.fillMaxWidth(), label = { Text("شناسه گیرنده اینستاگرام (IG-scoped ID)") }, singleLine = true)
+                            Text("گیرنده باید قبلاً به حساب حرفه‌ای شما پیام داده باشد. شناسه کاربری عمومی به‌تنهایی کافی نیست.", color = Color(0xFFFFD180), fontSize = 12.sp)
                         }
                         Button(
-                            enabled = !busy && draft.isNotBlank() && (platform != "telegram" || chatId.isNotBlank()),
+                            enabled = !busy && draft.isNotBlank() && (if (platform == "telegram") chatId.isNotBlank() else instagramRecipientId.isNotBlank()),
                             onClick = {
-                                val confirmText = "پلتفرم: $platform\nگیرنده: ${if (platform == "telegram") chatId else "شناسه گیرنده اینستاگرام"}\n\nپیام:\n$draft\n\nآیا تأیید می‌کنی که پیام ارسال شود؟"
+                                val confirmText = "پلتفرم: $platform\nگیرنده: ${if (platform == "telegram") chatId else instagramRecipientId}\n\nپیام:\n$draft\n\nآیا تأیید می‌کنی که پیام ارسال شود؟"
                                 android.app.AlertDialog.Builder(context)
                                     .setTitle("تأیید ارسال")
                                     .setMessage(confirmText)
@@ -205,7 +238,8 @@ fun AvaScreen(onSpeak: (String) -> Unit, onListenResult: (String) -> Unit) {
                                                     val result = post("/api/send/telegram", JSONObject().put("chatId", chatId.trim()).put("text", draft.trim()))
                                                     status = "ارسال شد. شناسه پیام: ${result.optString("messageId", "ثبت شد")}"
                                                 } else {
-                                                    status = "برای ارسال اینستاگرام ابتدا اتصال رسمی Meta را در سرور کامل کن."
+                                                    val result = post("/api/send/instagram", JSONObject().put("recipientId", instagramRecipientId.trim()).put("text", draft.trim()))
+                                                    status = "پیام اینستاگرام ارسال شد. شناسه: ${result.optString("messageId", "ثبت شد")}" 
                                                 }
                                             } catch (e: Exception) { status = e.message ?: "ارسال ناموفق بود." }
                                             finally { busy = false }
@@ -218,6 +252,42 @@ fun AvaScreen(onSpeak: (String) -> Unit, onListenResult: (String) -> Unit) {
                 }
                 Text("امنیت: کلیدهای API فقط روی سرور نگهداری شوند. ارسال همیشه نیازمند تأیید توست.", color = Color(0xFF9C91AE), fontSize = 11.sp)
             }
+        }
+    }
+}
+
+
+@Composable
+private fun Ava3DAvatar(modifier: Modifier = Modifier) {
+    val engine = rememberEngine()
+    val modelLoader = rememberModelLoader(engine)
+    var walking by remember { mutableStateOf(false) }
+
+    Box(modifier = modifier) {
+        SceneView(
+            modifier = Modifier.fillMaxSize(),
+            engine = engine,
+            modelLoader = modelLoader,
+            cameraManipulator = rememberCameraManipulator()
+        ) {
+            rememberModelInstance(modelLoader, "models/woman-base-character.glb")?.let { instance ->
+                ModelNode(
+                    modelInstance = instance,
+                    scaleToUnits = 1.0f,
+                    autoAnimate = false,
+                    animationName = if (walking) "Walk" else "Idle",
+                    animationLoop = true,
+                    animationSpeed = 1.0f
+                )
+            }
+        }
+
+        Button(
+            onClick = { walking = !walking },
+            modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7650C9))
+        ) {
+            Text(if (walking) "توقف راه رفتن" else "شروع راه رفتن")
         }
     }
 }
