@@ -31,7 +31,7 @@ OUTFITS = {
   dict(name="Leggings",kind="legs",y0=.05,y1=.59,legs=.16,hips=.28,offset=.010,
        color=(.055,.075,.11,1),rough=.46)],
  "evening": [
-  dict(name="EveningDress",kind="dress",y0=.10,y1=.89,torso=.10,arms=.58,
+  dict(name="EveningDress",kind="dress",y0=.10,y1=.89,torso=.10,arms=99.0,
        legs=.12,hips=.20,offset=.012,color=(.12,.035,.19,1),rough=.32,
        flare=.24,waist=.56,hem=.12)]
 }
