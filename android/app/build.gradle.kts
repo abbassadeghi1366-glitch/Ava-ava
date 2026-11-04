@@ -17,8 +17,9 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
-        // Android emulator -> host machine. For physical device, replace with PC LAN IP.
-        buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8787\"")
+        // Override with -PAVA_BASE_URL=https://your-deployed-backend.example
+        val avaBaseUrl = providers.gradleProperty("AVA_BASE_URL").orElse("https://YOUR-AVA-SERVER.onrender.com").get()
+        buildConfigField("String", "BASE_URL", "\"$avaBaseUrl\"")
     }
     buildFeatures { compose = true; buildConfig = true }
 }
