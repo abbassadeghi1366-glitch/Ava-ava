@@ -51,6 +51,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 import io.github.sceneview.SceneView
 import io.github.sceneview.rememberCameraManipulator
 import io.github.sceneview.rememberEngine
@@ -58,7 +59,11 @@ import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberModelLoader
 import io.github.sceneview.node.ModelNode
 
-private val client = OkHttpClient()
+private val client = OkHttpClient.Builder()
+    .connectTimeout(15, TimeUnit.SECONDS)
+    .readTimeout(60, TimeUnit.SECONDS)
+    .callTimeout(75, TimeUnit.SECONDS)
+    .build()
 private val jsonType = "application/json; charset=utf-8".toMediaType()
 
 class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
@@ -94,7 +99,8 @@ fun AvaScreen(onSpeak: (String) -> Unit, onListenResult: (String) -> Unit) {
     val context = LocalContext.current
     var input by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
-    var status by remember { mutableStateOf("آماده‌ام؛ چه کاری انجام بدهم؟") }
+    var status by remember { mutableStateOf("در حال بررسی اتصال آوا…") }
+    var serviceOnline by remember { mutableStateOf(false) }
     var draft by remember { mutableStateOf("") }
     var platform by remember { mutableStateOf("telegram") }
     var chatId by remember { mutableStateOf("") }
@@ -104,6 +110,19 @@ fun AvaScreen(onSpeak: (String) -> Unit, onListenResult: (String) -> Unit) {
     var avatarExpanded by remember { mutableStateOf(false) }
     var touchMessage by remember { mutableStateOf("برای تعامل با آوا یکی از دکمه‌ها را انتخاب کن.") }
     val lines = remember { mutableStateListOf(ChatLine(false, "سلام! من آوا هستم. می‌توانم به پرسش‌ها پاسخ بدهم و برای پیام‌ها پیش‌نویس بسازم.")) }
+
+    LaunchedEffect(Unit) {
+        serviceOnline = withContext(Dispatchers.IO) {
+            runCatching {
+                client.newCall(
+                    Request.Builder().url(BuildConfig.BASE_URL + "/health").get().build()
+                ).execute().use { response ->
+                    response.isSuccessful && JSONObject(response.body?.string().orEmpty()).optBoolean("ok")
+                }
+            }.getOrDefault(false)
+        }
+        status = if (serviceOnline) "اتصال به سرور آوا برقرار است." else "سرور آوا در دسترس نیست؛ اتصال اینترنت یا وضعیت سرویس را بررسی کن."
+    }
 
     val speechLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         val spoken = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
