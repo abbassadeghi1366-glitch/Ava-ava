@@ -36,3 +36,11 @@ dependencies {
     implementation("io.github.sceneview:sceneview:4.26.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
+
+val copyAvaModel by tasks.registering(Copy::class) {
+    from(rootProject.projectDir.parentFile.resolve("woman-base-character.glb"))
+    into(layout.buildDirectory.dir("generated/avaAssets"))
+}
+
+android.sourceSets.getByName("main").assets.srcDir(layout.buildDirectory.dir("generated/avaAssets"))
+tasks.named("preBuild").configure { dependsOn(copyAvaModel) }
