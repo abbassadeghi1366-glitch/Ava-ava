@@ -143,14 +143,22 @@ fun AvaScreen(onSpeak: (String) -> Unit, onListenResult: (String) -> Unit) {
                     }
                 }
 
-                // Real GLB avatar viewport. The supplied model is a static mesh (no embedded animations).
+                // Real GLB avatar viewport. Animation clips are selected from the embedded GLB tracks.
                 Surface(
                     shape = RoundedCornerShape(22.dp),
                     color = Color(0xFF211A30),
                     modifier = Modifier.fillMaxWidth().height(300.dp)
                 ) {
                     Box(Modifier.fillMaxSize()) {
-                        Ava3DAvatar(Modifier.fillMaxSize())
+                        Ava3DAvatar(
+                            Modifier.fillMaxSize(),
+                            animationName = when (gameMode) {
+                                "راه رفتن" -> "Walk"
+                                "دویدن" -> "Run"
+                                "سلام" -> "Wave"
+                                else -> "Idle"
+                            }
+                        )
                         Surface(
                             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 10.dp),
                             color = Color(0xAA211A30), shape = RoundedCornerShape(50)
@@ -167,19 +175,27 @@ fun AvaScreen(onSpeak: (String) -> Unit, onListenResult: (String) -> Unit) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(onClick = {
                                 gameMode = "راه رفتن"
-                                touchMessage = "حالت راه رفتن انتخاب شد؛ کلیپ حرکتی باید به مدل اضافه شود."
+                                touchMessage = "انیمیشن واقعی Walk در حال پخش است."
                                 onSpeak("بیا با هم قدم بزنیم!")
                             }, modifier = Modifier.weight(1f)) { Text("🚶 راه رفتن") }
                             Button(onClick = {
-                                gameMode = "رقص"
-                                touchMessage = "حالت رقص انتخاب شد؛ کلیپ رقص باید به مدل اضافه شود."
-                                onSpeak("آماده‌ای برقصیم؟")
-                            }, modifier = Modifier.weight(1f)) { Text("💃 رقص") }
+                                gameMode = "دویدن"
+                                touchMessage = "انیمیشن واقعی Run در حال پخش است."
+                                onSpeak("حالا کمی سریع‌تر!")
+                            }, modifier = Modifier.weight(1f)) { Text("🏃 دویدن") }
                             OutlinedButton(onClick = {
                                 gameMode = "آماده"
-                                touchMessage = "آوا به حالت آماده برگشت."
+                                touchMessage = "آوا به انیمیشن Idle برگشت."
                                 onSpeak("من اینجام!")
                             }, modifier = Modifier.weight(1f)) { Text("توقف") }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(onClick = {
+                                gameMode = "سلام"
+                                touchMessage = "انیمیشن واقعی Wave در حال پخش است."
+                                onSpeak("سلام! خوش اومدی.")
+                            }, modifier = Modifier.weight(1f)) { Text("👋 دست تکان دادن") }
+                            OutlinedButton(onClick = { gameMode = "رقص"; touchMessage = "برای رقص واقعی باید کلیپ Dance به مدل اضافه شود." }, enabled = false, modifier = Modifier.weight(1f)) { Text("💃 رقص (بعداً)") }
                         }
                         Text("انتخاب استایل", color = Color.White, fontWeight = FontWeight.Medium)
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -196,7 +212,7 @@ fun AvaScreen(onSpeak: (String) -> Unit, onListenResult: (String) -> Unit) {
                             OutlinedButton(onClick = { touchMessage = "آوا با لبخند واکنش نشان می‌دهد."; onSpeak("چه خبر؟") }) { Text("شانه") }
                         }
                         Text(touchMessage, color = Color(0xFFBDB2D0), fontSize = 12.sp)
-                        Text("یادداشت فنی: مدل فعلی کلیپ‌های راه‌رفتن و رقص ندارد؛ اتصال انیمیشن و مدل لباس در مرحله بعد انجام می‌شود.", color = Color(0xFFFFD180), fontSize = 11.sp)
+                        Text("انیمیشن‌های موجود در مدل: Idle، Walk، Run و Wave. برای رقص کامل باید کلیپ Dance جداگانه به همین اسکلت اضافه شود.", color = Color(0xFFFFD180), fontSize = 11.sp)
                     }
                 }
 
@@ -303,36 +319,28 @@ fun AvaScreen(onSpeak: (String) -> Unit, onListenResult: (String) -> Unit) {
 
 
 @Composable
-private fun Ava3DAvatar(modifier: Modifier = Modifier) {
+private fun Ava3DAvatar(
+    modifier: Modifier = Modifier,
+    animationName: String = "Idle"
+) {
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine)
-    var walking by remember { mutableStateOf(false) }
 
-    Box(modifier = modifier) {
-        SceneView(
-            modifier = Modifier.fillMaxSize(),
-            engine = engine,
-            modelLoader = modelLoader,
-            cameraManipulator = rememberCameraManipulator()
-        ) {
-            rememberModelInstance(modelLoader, "models")?.let { instance ->
-                ModelNode(
-                    modelInstance = instance,
-                    scaleToUnits = 1.0f,
-                    autoAnimate = false,
-                    animationName = if (walking) "Walk" else "Idle",
-                    animationLoop = true,
-                    animationSpeed = 1.0f
-                )
-            }
-        }
-
-        Button(
-            onClick = { walking = !walking },
-            modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7650C9))
-        ) {
-            Text(if (walking) "توقف راه رفتن" else "شروع راه رفتن")
+    SceneView(
+        modifier = modifier,
+        engine = engine,
+        modelLoader = modelLoader,
+        cameraManipulator = rememberCameraManipulator()
+    ) {
+        rememberModelInstance(modelLoader, "woman-base-character.glb")?.let { instance ->
+            ModelNode(
+                modelInstance = instance,
+                scaleToUnits = 1.0f,
+                autoAnimate = false,
+                animationName = animationName,
+                animationLoop = true,
+                animationSpeed = 1.0f
+            )
         }
     }
 }
