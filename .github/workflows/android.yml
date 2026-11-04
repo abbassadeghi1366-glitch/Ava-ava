@@ -1,11 +1,13 @@
-name: Build Ava Android APK
+name: Build Ava Android APK with 3D wardrobe
 
 on:
   workflow_dispatch:
   push:
     paths:
       - 'android/**'
+      - 'tools/generate_ava_wardrobe.py'
       - '.github/workflows/android.yml'
+      - 'woman-base-character.glb'
 
 permissions:
   contents: read
@@ -15,6 +17,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install Blender
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y blender
+          blender --version
+      - name: Install NumPy for Blender
+        run: |
+          sudo apt-get install -y python3-numpy
+          blender --background --python-expr "import numpy; print('NumPy available:', numpy.__version__)"
+      - name: Generate skinned outfit GLBs
+        run: |
+          mkdir -p android/app/src/main/assets/wardrobe
+          blender --background --python tools/generate_ava_wardrobe.py -- \
+            --input woman-base-character.glb \
+            --output android/app/src/main/assets/wardrobe
+          test -s android/app/src/main/assets/wardrobe/ava_casual.glb
+          test -s android/app/src/main/assets/wardrobe/ava_sport.glb
+          test -s android/app/src/main/assets/wardrobe/ava_evening.glb
+          ls -lh android/app/src/main/assets/wardrobe/*.glb
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -27,8 +48,15 @@ jobs:
           gradle-version: '8.9'
       - name: Build debug APK
         run: gradle --no-daemon -Dandroid.useAndroidX=true -p android assembleDebug
-      - uses: actions/upload-artifact@v4
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
         with:
-          name: Ava-debug-APK
+          name: Ava-debug-APK-with-wardrobe
           path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+      - name: Upload generated wardrobe GLBs
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ava-3D-Wardrobe-GLB
+          path: android/app/src/main/assets/wardrobe/*.glb
           if-no-files-found: error

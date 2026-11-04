@@ -15,9 +15,8 @@ android {
         applicationId = "com.avaai"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "1.1"
-        // Production HTTPS backend used by physical Android devices.
+        versionCode = 3
+        versionName = "1.2"
         buildConfigField("String", "BASE_URL", "\"https://ava-backend-skcz.onrender.com\"")
     }
     buildFeatures { compose = true; buildConfig = true }
@@ -32,13 +31,13 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    // Native 3D GLB rendering with Filament + Jetpack Compose
     implementation("io.github.sceneview:sceneview:4.26.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
 val copyAvaModel by tasks.registering(Copy::class) {
     from(rootProject.projectDir.parentFile.resolve("woman-base-character.glb"))
+    from(fileTree("src/main/assets/wardrobe") { include("*.glb") })
     into(layout.buildDirectory.dir("generated/avaAssets"))
 }
 
