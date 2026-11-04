@@ -46,7 +46,7 @@ jobs:
           test -f android/app/src/main/java/com/avaai/MainActivity.kt
 
       - name: Build debug APK
-        run: gradle --no-daemon -p android :app:assembleDebug
+        run: gradle --no-daemon -p android -PAVA_BASE_URL=https://ava-backend-skcz.onrender.com :app:assembleDebug
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
