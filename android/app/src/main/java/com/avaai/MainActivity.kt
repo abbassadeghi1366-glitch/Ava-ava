@@ -168,8 +168,13 @@ fun AvaScreen(onSpeak: (String) -> Unit, onListenResult: (String) -> Unit) {
                         Text("AVA AI", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
                         Text("دستیار هوشمند فارسی", color = Color(0xFFC5A6FF))
                     }
-                    Surface(shape = CircleShape, color = Color(0xFF233A35)) {
-                        Text("● آنلاین", modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = Color(0xFF7BE0B1), fontSize = 12.sp)
+                    Surface(shape = CircleShape, color = if (serviceOnline) Color(0xFF233A35) else Color(0xFF49342D)) {
+                        Text(
+                            if (serviceOnline) "● متصل" else "● آفلاین",
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            color = if (serviceOnline) Color(0xFF7BE0B1) else Color(0xFFFFC49B),
+                            fontSize = 12.sp
+                        )
                     }
                 }
 
