@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - fix/android-gradle-build
+      - feature/ava-v2
     paths:
       - 'android/**'
       - '.github/workflows/android.yml'
