@@ -22,13 +22,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y blender
           blender --version
-      - name: Install NumPy into Blender Python
+      - name: Install NumPy for Blender
         run: |
-          BLENDER_PYTHON=$(blender --background --python-expr "import sys; print('BLENDER_PYTHON=' + sys.executable)" 2>&1 | sed -n 's/^BLENDER_PYTHON=//p' | tail -n 1)
-          echo "Blender Python: $BLENDER_PYTHON"
-          test -x "$BLENDER_PYTHON"
-          "$BLENDER_PYTHON" -m ensurepip --upgrade
-          "$BLENDER_PYTHON" -m pip install --upgrade numpy"
+          sudo apt-get install -y python3-numpy
+          blender --background --python-expr "import numpy; print('NumPy available:', numpy.__version__)"
       - name: Generate skinned outfit GLBs
         run: |
           mkdir -p android/app/src/main/assets/wardrobe
