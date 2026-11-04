@@ -391,10 +391,14 @@ private fun Ava3DAvatar(
 ) {
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine)
-    val tint = when (outfitStyle) {
-        "لباس روزمره" -> Color(0xFF4F9BCE)
-        "لباس ورزشی" -> Color(0xFF45B879)
-        else -> Color(0xFFB45AD6)
+    val modelAssetName = remember(context, outfitStyle) {
+        val candidate = when (outfitStyle) {
+            "لباس روزمره" -> "ava_casual.glb"
+            "لباس ورزشی" -> "ava_sport.glb"
+            else -> "ava_evening.glb"
+        }
+        runCatching { context.assets.open(candidate).use { }; candidate }
+            .getOrDefault("woman-base-character.glb")
     }
 
     SceneView(
@@ -403,11 +407,7 @@ private fun Ava3DAvatar(
         modelLoader = modelLoader,
         cameraManipulator = rememberCameraManipulator()
     ) {
-        rememberModelInstance(modelLoader, "woman-base-character.glb")?.let { instance ->
-            SideEffect {
-                // The current GLB has no separate wardrobe meshes; apply a visible material tint as a fallback.
-                instance.materialInstances.firstOrNull()?.setParameter("baseColorFactor", tint.red, tint.green, tint.blue, 1f)
-            }
+        rememberModelInstance(modelLoader, modelAssetName)?.let { instance ->
             ModelNode(
                 modelInstance = instance,
                 scaleToUnits = 1.0f,
