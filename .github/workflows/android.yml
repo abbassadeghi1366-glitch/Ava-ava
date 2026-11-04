@@ -22,12 +22,19 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y blender
           blender --version
+      - name: Install NumPy into Blender Python
+        run: |
+          blender --background --python-expr "import bpy, subprocess; py=bpy.app.binary_path_python; print('Blender Python:', py); subprocess.check_call([py, '-m', 'ensurepip', '--upgrade']); subprocess.check_call([py, '-m', 'pip', 'install', '--upgrade', 'numpy'])"
       - name: Generate skinned outfit GLBs
         run: |
           mkdir -p android/app/src/main/assets/wardrobe
           blender --background --python tools/generate_ava_wardrobe.py -- \
             --input woman-base-character.glb \
             --output android/app/src/main/assets/wardrobe
+          test -s android/app/src/main/assets/wardrobe/ava_casual.glb
+          test -s android/app/src/main/assets/wardrobe/ava_sport.glb
+          test -s android/app/src/main/assets/wardrobe/ava_evening.glb
+          ls -lh android/app/src/main/assets/wardrobe/*.glb
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
