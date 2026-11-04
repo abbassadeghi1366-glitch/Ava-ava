@@ -389,6 +389,7 @@ private fun Ava3DAvatar(
     outfitStyle: String = "لباس شب",
     animationName: String = "Idle"
 ) {
+    val context = LocalContext.current
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine)
     val modelAssetName = remember(context, outfitStyle) {
