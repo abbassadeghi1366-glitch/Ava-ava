@@ -24,7 +24,11 @@ jobs:
           blender --version
       - name: Install NumPy into Blender Python
         run: |
-          blender --background --python-expr "import bpy, subprocess; py=bpy.app.binary_path_python; print('Blender Python:', py); subprocess.check_call([py, '-m', 'ensurepip', '--upgrade']); subprocess.check_call([py, '-m', 'pip', 'install', '--upgrade', 'numpy'])"
+          BLENDER_PYTHON=$(blender --background --python-expr "import sys; print('BLENDER_PYTHON=' + sys.executable)" 2>&1 | sed -n 's/^BLENDER_PYTHON=//p' | tail -n 1)
+          echo "Blender Python: $BLENDER_PYTHON"
+          test -x "$BLENDER_PYTHON"
+          "$BLENDER_PYTHON" -m ensurepip --upgrade
+          "$BLENDER_PYTHON" -m pip install --upgrade numpy"
       - name: Generate skinned outfit GLBs
         run: |
           mkdir -p android/app/src/main/assets/wardrobe
