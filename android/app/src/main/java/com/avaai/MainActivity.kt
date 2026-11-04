@@ -4,6 +4,9 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
 import androidx.activity.ComponentActivity
@@ -36,6 +39,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -60,6 +65,11 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
     private var tts: TextToSpeech? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            hide(WindowInsetsCompat.Type.systemBars())
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
         tts = TextToSpeech(this, this)
         setContent { AvaScreen(
             onSpeak = { text -> tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "ava_reply") },
@@ -91,6 +101,7 @@ fun AvaScreen(onSpeak: (String) -> Unit, onListenResult: (String) -> Unit) {
     var instagramRecipientId by remember { mutableStateOf("") }
     var gameMode by remember { mutableStateOf("آماده") }
     var outfitStyle by remember { mutableStateOf("لباس شب") }
+    var avatarExpanded by remember { mutableStateOf(false) }
     var touchMessage by remember { mutableStateOf("برای تعامل با آوا یکی از دکمه‌ها را انتخاب کن.") }
     val lines = remember { mutableStateListOf(ChatLine(false, "سلام! من آوا هستم. می‌توانم به پرسش‌ها پاسخ بدهم و برای پیام‌ها پیش‌نویس بسازم.")) }
 
@@ -152,6 +163,7 @@ fun AvaScreen(onSpeak: (String) -> Unit, onListenResult: (String) -> Unit) {
                     Box(Modifier.fillMaxSize()) {
                         Ava3DAvatar(
                             Modifier.fillMaxSize(),
+                            outfitStyle = outfitStyle,
                             animationName = when (gameMode) {
                                 "راه رفتن" -> "Walk"
                                 "دویدن" -> "Run"
@@ -159,11 +171,40 @@ fun AvaScreen(onSpeak: (String) -> Unit, onListenResult: (String) -> Unit) {
                                 else -> "Idle"
                             }
                         )
+                        IconButton(
+                            onClick = { avatarExpanded = true },
+                            modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)
+                        ) { Text("⛶", color = Color.White, fontSize = 26.sp) }
                         Surface(
                             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 10.dp),
                             color = Color(0xAA211A30), shape = RoundedCornerShape(50)
                         ) {
                             Text("آوا • مدل سه‌بعدی", modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp), color = Color.White, fontSize = 12.sp)
+                        }
+                    }
+                }
+
+                if (avatarExpanded) {
+                    Dialog(onDismissRequest = { avatarExpanded = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+                        Box(Modifier.fillMaxSize().background(Color(0xFF100D1A))) {
+                            Ava3DAvatar(
+                                modifier = Modifier.fillMaxSize(),
+                                outfitStyle = outfitStyle,
+                                animationName = when (gameMode) {
+                                    "راه رفتن" -> "Walk"
+                                    "دویدن" -> "Run"
+                                    "سلام" -> "Wave"
+                                    else -> "Idle"
+                                }
+                            )
+                            TextButton(onClick = { avatarExpanded = false }, modifier = Modifier.align(Alignment.TopEnd).padding(12.dp)) {
+                                Text("بستن ✕", color = Color.White)
+                            }
+                            Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.Center) {
+                                listOf("لباس شب", "لباس روزمره", "لباس ورزشی").forEach { style ->
+                                    FilterChip(selected = outfitStyle == style, onClick = { outfitStyle = style }, label = { Text(style) })
+                                }
+                            }
                         }
                     }
                 }
@@ -321,10 +362,16 @@ fun AvaScreen(onSpeak: (String) -> Unit, onListenResult: (String) -> Unit) {
 @Composable
 private fun Ava3DAvatar(
     modifier: Modifier = Modifier,
+    outfitStyle: String = "لباس شب",
     animationName: String = "Idle"
 ) {
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine)
+    val tint = when (outfitStyle) {
+        "لباس روزمره" -> Color(0xFF4F9BCE)
+        "لباس ورزشی" -> Color(0xFF45B879)
+        else -> Color(0xFFB45AD6)
+    }
 
     SceneView(
         modifier = modifier,
@@ -333,6 +380,10 @@ private fun Ava3DAvatar(
         cameraManipulator = rememberCameraManipulator()
     ) {
         rememberModelInstance(modelLoader, "woman-base-character.glb")?.let { instance ->
+            SideEffect {
+                // The current GLB has no separate wardrobe meshes; apply a visible material tint as a fallback.
+                instance.materialInstances.firstOrNull()?.setParameter("baseColorFactor", tint.red, tint.green, tint.blue, 1f)
+            }
             ModelNode(
                 modelInstance = instance,
                 scaleToUnits = 1.0f,
