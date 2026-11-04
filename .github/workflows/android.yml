@@ -26,7 +26,7 @@ jobs:
         with:
           gradle-version: '8.9'
       - name: Build debug APK
-        run: gradle --no-daemon -p android assembleDebug
+        run: gradle --no-daemon -Dandroid.useAndroidX=true -p android assembleDebug
       - uses: actions/upload-artifact@v4
         with:
           name: Ava-debug-APK

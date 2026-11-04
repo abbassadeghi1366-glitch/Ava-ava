@@ -11,7 +11,14 @@ app.use(express.json({ limit: "1mb", verify: (req, _res, buf) => { req.rawBody =
 const PORT = Number(process.env.PORT || 8787);
 const aiBase = (process.env.AI_BASE_URL || "https://api.openai.com/v1").replace(/\/$/, "");
 
-app.get("/health", (_req, res) => res.json({ ok: true, service: "ava-ai-backend" }));
+app.get("/health", (_req, res) => res.json({
+  ok: true,
+  service: "ava-ai-backend",
+  aiConfigured: Boolean(process.env.AI_API_KEY && process.env.AI_API_KEY !== "replace_me"),
+  aiModel: process.env.AI_MODEL || "gpt-4o-mini",
+  telegramConfigured: Boolean(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_BOT_TOKEN !== "replace_me"),
+  instagramConfigured: Boolean(process.env.INSTAGRAM_ACCESS_TOKEN && process.env.INSTAGRAM_ACCESS_TOKEN !== "replace_me")
+}));
 
 function requireString(value, name, max = 5000) {
   if (typeof value !== "string" || !value.trim()) {
@@ -41,12 +48,25 @@ async function callAI(messages) {
       model: process.env.AI_MODEL || "gpt-4o-mini",
       messages,
       temperature: 0.7
-    })
+    }),
+    signal: AbortSignal.timeout(45000)
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     console.error("AI provider error:", response.status, data);
-    throw new Error("سرویس هوش مصنوعی پاسخ نداد؛ تنظیمات API را بررسی کن.");
+    const providerError = new Error(
+      response.status === 429
+        ? "سهمیه یا محدودیت درخواست سرویس هوش مصنوعی فعال شده است. اعتبار و سقف مصرف API را بررسی کن و کمی بعد دوباره تلاش کن."
+        : response.status === 401 || response.status === 403
+          ? "کلید API نامعتبر است یا مجوز دسترسی به مدل را ندارد. AI_API_KEY و دسترسی مدل را بررسی کن."
+          : response.status >= 500
+            ? "ارائه‌دهنده هوش مصنوعی موقتاً دچار اختلال است. چند دقیقه دیگر دوباره تلاش کن."
+            : "سرویس هوش مصنوعی پاسخ نامعتبر داد؛ تنظیمات مدل و API را بررسی کن."
+    );
+    providerError.status = response.status === 429 ? 429 : response.status === 401 || response.status === 403 ? 503 : 502;
+    const retryAfter = response.headers.get("retry-after");
+    if (retryAfter) providerError.retryAfter = retryAfter;
+    throw providerError;
   }
   return data.choices?.[0]?.message?.content?.trim() || "پاسخی دریافت نشد.";
 }
@@ -183,6 +203,7 @@ app.post("/api/send/instagram", async (req, res, next) => {
 app.use((err, _req, res, _next) => {
   const status = err.status || 500;
   if (status === 500) console.error(err);
+  if (err.retryAfter) res.set("Retry-After", err.retryAfter);
   res.status(status).json({ error: status === 500 ? "خطای داخلی سرور" : err.message });
 });
 

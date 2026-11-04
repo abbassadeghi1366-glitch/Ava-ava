@@ -15,10 +15,10 @@ android {
         applicationId = "com.avaai"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
-        // Android emulator -> host machine. For physical device, replace with PC LAN IP.
-        buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8787\"")
+        versionCode = 2
+        versionName = "1.1"
+        // Production HTTPS backend used by physical Android devices.
+        buildConfigField("String", "BASE_URL", "\"https://ava-backend-skcz.onrender.com\"")
     }
     buildFeatures { compose = true; buildConfig = true }
 }
@@ -36,3 +36,11 @@ dependencies {
     implementation("io.github.sceneview:sceneview:4.26.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
+
+val copyAvaModel by tasks.registering(Copy::class) {
+    from(rootProject.projectDir.parentFile.resolve("woman-base-character.glb"))
+    into(layout.buildDirectory.dir("generated/avaAssets"))
+}
+
+android.sourceSets.getByName("main").assets.srcDir(layout.buildDirectory.dir("generated/avaAssets"))
+tasks.named("preBuild").configure { dependsOn(copyAvaModel) }
