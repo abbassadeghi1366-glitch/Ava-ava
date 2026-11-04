@@ -236,7 +236,7 @@ private fun Ava3DAvatar(modifier: Modifier = Modifier) {
             modelLoader = loader,
             cameraManipulator = io.github.sceneview.rememberCameraManipulator()
         ) {
-            io.github.sceneview.rememberModelInstance(loader, "models")?.let { instance ->
+            io.github.sceneview.rememberModelInstance(loader, "models/woman-base-character.glb")?.let { instance ->
                 io.github.sceneview.node.ModelNode(modelInstance = instance, scaleToUnits = 1.0f, autoAnimate = false)
             }
         }
